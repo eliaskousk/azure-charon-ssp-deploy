@@ -20,7 +20,7 @@ param adminPassword string
 param vmNamePrefix string = '${prefix}vm'
 
 @description('Size of the virtual machines')
-param vmSize string = 'Standard_D2s_v3'
+param vmSize string = 'Standard_F8s_v2'
 
 @description('Loab Balancer name')
 param loadBalancerName string = '${prefix}-ilb'
