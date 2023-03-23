@@ -155,9 +155,9 @@ resource vm 'Microsoft.Compute/virtualMachines@2021-11-01' = [for i in range(0, 
   location: location
   tags: tags
   plan: {
-    name: '<name>'
-    publisher: '<publisher>'
-    product: '<product>'          
+    name: 'charon-ssp-with-ve-license'
+    publisher: 'stromasys'
+    product: 'charon-ssp-ve'
   }
   properties: {
     availabilitySet: {
@@ -178,12 +178,11 @@ resource vm 'Microsoft.Compute/virtualMachines@2021-11-01' = [for i in range(0, 
           storageAccountType: storageAccountType
         }
       }
-      
       imageReference: {
-        publisher: '<stromasys>'
-        offer: '<offername>'
-        sku: '<skuname>'
-        version: '<x.x.xxxx>'
+        publisher: 'stromasys'
+        offer: 'charon-ssp-ve'
+        sku: 'charon-ssp-with-ve-license'
+        version: 'latest'
       }
     }
     networkProfile: {
