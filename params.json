@@ -1,0 +1,48 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "charonVersion": {
+      "value": "Charon-SSP-Latest"
+    },
+    "authenticationType": {
+      "value": "password"
+    },
+    "virtualNetworkAddressRange": {
+      "value": "10.0.0.0/16"
+    },
+    "subnetAddressRange": {
+      "value": "10.0.0.0/24"
+    },
+    "securityType": {
+      "value": "Standard"
+    },
+    "prefix": {
+      "value": "test"
+    },
+    "adminUsername": {
+      "value": "lupo"
+    },
+    "adminPasswordOrKey": {
+        "value": "Ra42$@!sjf@Vf90"
+    },
+    "numberOfEmulatorInstances": {
+      "value": 2
+    },
+    "vmSizeEmulatorHost": {
+      "value": "Standard_F2s_v2"
+    },
+    "vmSizeLicenseServer": {
+      "value": "Standard_B2s"
+    },
+    "vmSizeManager": {
+      "value": "Standard_B2s"
+    },
+    "storageAccountType": {
+      "value": "Standard_LRS"
+    },
+    "location": {
+      "value": "East US 2"
+    }
+  }
+}
