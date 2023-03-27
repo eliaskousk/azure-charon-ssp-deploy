@@ -68,7 +68,7 @@ param subnetAddressRange string = '10.0.0.0/24'
   'Standard'
   'TrustedLaunch'
 ])
-param securityType string = 'TrustedLaunch'
+param securityType string = 'Standard'
 
 //
 // Variables
