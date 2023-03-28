@@ -2,9 +2,6 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "charonVersion": {
-      "value": "Charon-SSP-Latest"
-    },
     "authenticationType": {
       "value": "password"
     },
@@ -30,7 +27,7 @@
       "value": 2
     },
     "vmSizeEmulatorHost": {
-      "value": "Standard_F2s_v2"
+      "value": "Standard_F8s_v2"
     },
     "vmSizeLicenseServer": {
       "value": "Standard_B2s"
@@ -42,7 +39,7 @@
       "value": "Standard_LRS"
     },
     "location": {
-      "value": "East US 2"
+      "value": "Central US"
     }
   }
 }
