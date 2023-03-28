@@ -10,16 +10,13 @@ targetScope = 'resourceGroup'
 //
 
 @description('Location of all resources')
-param location string = resourceGroup().location
+param location string
 
 @description('Prefix for all names')
 param prefix string
 
 @description('Tags for all resources')
-param tags object = {
-  tag1: 'tag-value-1'
-  tag2: 'tag-value-2'
-}
+param tags object
 
 @description('Admin Username for VMs')
 param adminUsername string 
@@ -50,18 +47,8 @@ param vmSizeManager string = 'Standard_B2s'
 @description('Storage Type for Vhds')
 param storageAccountType string = 'Standard_LRS'
 
-@description('Virtual Network CIDR Address Range')
-param virtualNetworkAddressRange string = '10.0.0.0/16'
-
-@description('Subnet CIDR Address Range')
-param subnetAddressRange string = '10.0.0.0/24'
-
-@description('Security Type of the Virtual Machine.')
-@allowed([
-  'Standard'
-  'TrustedLaunch'
-])
-param securityType string = 'Standard'
+@description('Id of the subnet')
+param subnetId string = ''
 
 //
 // Variables
@@ -80,32 +67,20 @@ var charonPlan = {
   product: 'charon-ssp-ve'
 }
 
-@description('Name of the Virtual Network')
-var virtualNetworkName = '${prefix}-virtual-network'
-
-@description('Name of the Subnet')
-var subnetName = '${prefix}-subnet'
-
-@description('Name of the Network Security Group')
-var networkSecurityGroupName = '${prefix}-security-group'
-
-@description('Prefix to use for VM names')
-var vmNamePrefix = '${prefix}-vm'
-
-@description('Prefix to use for Network Interface names')
-var networkInterfaceNamePrefix = '${prefix}-nic'
-
-@description('Prefix to use for Public IP names')
-var publicIPAddressNamePrefix = '${prefix}-public-ip'
+@description('Availability Set name')
+var availabilitySetName = '${prefix}-availability-set'
 
 @description('Loab Balancer name')
 var loadBalancerName = '${prefix}-load-balancer'
 
-@description('Availability Set name')
-var availabilitySetName = '${prefix}-availability-set'
+@description('Name of the Network Security Group')
+var networkSecurityGroupName = '${prefix}-security-group'
 
-@description('Unique DNS Name for the Public IP used to access the VMs')
-var dnsLabelPrefix = toLower('${vmNamePrefix}-${uniqueString(resourceGroup().id)}')
+@description('Prefix to use for Network Interface names')
+var networkInterfaceNamePrefix = '${prefix}-nic'
+
+@description('Prefix to use for VM names')
+var vmNamePrefix = '${prefix}-vm'
 
 @description('Storage Account name')
 var storageAccountName = uniqueString(resourceGroup().id)
@@ -123,15 +98,6 @@ var linuxConfiguration = {
   }
 }
 
-@description('Security Profile')
-var securityProfile = {
-  uefiSettings: {
-    secureBootEnabled: true
-    vTpmEnabled: true
-  }
-  securityType: securityType
-}
-
 //
 // Storage Account for all VMs
 //
@@ -144,32 +110,6 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2021-08-01' = {
     name: storageAccountType
   }
   kind: 'StorageV2'
-}
-
-//
-// Virtual Network and Subnet for all VMs
-//
-
-resource virtualNetwork 'Microsoft.Network/virtualNetworks@2021-05-01' = {
-  name: virtualNetworkName
-  location: location
-  properties: {
-    addressSpace: {
-      addressPrefixes: [
-        virtualNetworkAddressRange
-      ]
-    }
-  }
-}
-
-resource subnet 'Microsoft.Network/virtualNetworks/subnets@2021-05-01' = {
-  parent: virtualNetwork
-  name: subnetName
-  properties: {
-    addressPrefix: subnetAddressRange
-    privateEndpointNetworkPolicies: 'Enabled'
-    privateLinkServiceNetworkPolicies: 'Enabled'
-  }
 }
 
 //
@@ -205,7 +145,7 @@ resource loadBalancer 'Microsoft.Network/loadBalancers@2021-05-01' = [for i in r
       {
         properties: {
           subnet: {
-            id: subnet.id
+            id: subnetId
           }
           privateIPAllocationMethod: 'Dynamic'
         }
@@ -334,86 +274,6 @@ resource networkSecurityGroupGuest 'Microsoft.Network/networkSecurityGroups@2021
 }
 
 //
-// Public IPs for Emulator Hosts
-//
-
-resource publicIPAddressHost 'Microsoft.Network/publicIPAddresses@2021-05-01' = [for i in range(0, numberOfEmulatorInstances): {
-  name: '${publicIPAddressNamePrefix}-host-${i}'
-  location: location
-  sku: {
-    name: 'Standard'
-  }
-  properties: {
-    publicIPAllocationMethod: 'Static'
-    publicIPAddressVersion: 'IPv4'
-    dnsSettings: {
-      domainNameLabel: 'host-${i}-${dnsLabelPrefix}'
-    }
-    idleTimeoutInMinutes: 4
-  }
-}]
-
-//
-// Public IPs for Emulator Guests
-//
-
-resource publicIPAddressGuest 'Microsoft.Network/publicIPAddresses@2021-05-01' = [for i in range(0, numberOfEmulatorInstances): {
-  name: '${publicIPAddressNamePrefix}-guest-${i}'
-  location: location
-  sku: {
-    name: 'Standard'
-  }
-  properties: {
-    publicIPAllocationMethod: 'Static'
-    publicIPAddressVersion: 'IPv4'
-    dnsSettings: {
-      domainNameLabel: 'guest-${i}-${dnsLabelPrefix}'
-    }
-    idleTimeoutInMinutes: 4
-  }
-}]
-
-//
-// Public IPs for License Server
-//
-
-resource publicIPAddressLicenseServer 'Microsoft.Network/publicIPAddresses@2021-05-01' = [for i in range(0, numberOfEmulatorInstances): {
-  name: '${publicIPAddressNamePrefix}-license-server-${i}'
-  location: location
-  sku: {
-    name: 'Standard'
-  }
-  properties: {
-    publicIPAllocationMethod: 'Static'
-    publicIPAddressVersion: 'IPv4'
-    dnsSettings: {
-      domainNameLabel: 'license-server-${i}-${dnsLabelPrefix}'
-    }
-    idleTimeoutInMinutes: 4
-  }
-}]
-
-//
-// Public IPs for Manager
-//
-
-resource publicIPAddressManager 'Microsoft.Network/publicIPAddresses@2021-05-01' = [for i in range(0, numberOfEmulatorInstances): {
-  name: '${publicIPAddressNamePrefix}-manager-${i}'
-  location: location
-  sku: {
-    name: 'Standard'
-  }
-  properties: {
-    publicIPAllocationMethod: 'Static'
-    publicIPAddressVersion: 'IPv4'
-    dnsSettings: {
-      domainNameLabel: 'manager-${i}-${dnsLabelPrefix}'
-    }
-    idleTimeoutInMinutes: 4
-  }
-}]
-
-//
 // Network Interfaces for Emulator Host (Linux)
 //
 
@@ -427,12 +287,9 @@ resource networkInterfaceEmulatorHost 'Microsoft.Network/networkInterfaces@2021-
         name: 'ipconfig1'
         properties: {
           subnet: {
-            id: subnet.id
+            id: subnetId
           }
           privateIPAllocationMethod: 'Dynamic'
-          publicIPAddress: {
-            id: publicIPAddressHost[i].id
-          }
           loadBalancerBackendAddressPools: [
             {
               id: resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '${loadBalancerName}-0', 'BackendPoolSSH')
@@ -464,12 +321,9 @@ resource networkInterfaceEmulatorGuest 'Microsoft.Network/networkInterfaces@2021
         name: 'ipconfig1'
         properties: {
           subnet: {
-            id: subnet.id
+            id: subnetId
           }
           privateIPAllocationMethod: 'Dynamic'
-          publicIPAddress: {
-            id: publicIPAddressGuest[i].id
-          }
           loadBalancerBackendAddressPools: [
             {
               id: resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '${loadBalancerName}-0', 'BackendPoolApp')
@@ -501,12 +355,9 @@ resource networkInterfaceLicenseServer 'Microsoft.Network/networkInterfaces@2021
         name: 'ipconfig1'
         properties: {
           subnet: {
-            id: subnet.id
+            id: subnetId
           }
           privateIPAllocationMethod: 'Dynamic'
-          publicIPAddress: {
-            id: publicIPAddressLicenseServer[i].id
-          }
           loadBalancerBackendAddressPools: [
             {
               id: resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '${loadBalancerName}-1', 'BackendPoolSSH')
@@ -538,12 +389,9 @@ resource networkInterfaceManager 'Microsoft.Network/networkInterfaces@2021-05-01
         name: 'ipconfig1'
         properties: {
           subnet: {
-            id: subnet.id
+            id: subnetId
           }
           privateIPAllocationMethod: 'Dynamic'
-          publicIPAddress: {
-            id: publicIPAddressManager[i].id
-          }
           loadBalancerBackendAddressPools: [
             {
               id: resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '${loadBalancerName}-2', 'BackendPoolSSH')
@@ -583,7 +431,7 @@ resource vmEmulator 'Microsoft.Compute/virtualMachines@2021-11-01' = [for i in r
       adminPassword: adminPasswordOrKey
       linuxConfiguration: ((authenticationType == 'password') ? null : linuxConfiguration)
     }
-    securityProfile: ((securityType == 'TrustedLaunch') ? securityProfile : null)
+    securityProfile: null
     storageProfile: {
       osDisk: {
         createOption: 'FromImage'
@@ -639,7 +487,7 @@ resource vmLicenseServer 'Microsoft.Compute/virtualMachines@2021-11-01' = [for i
       adminPassword: adminPasswordOrKey
       linuxConfiguration: ((authenticationType == 'password') ? null : linuxConfiguration)
     }
-    securityProfile: ((securityType == 'TrustedLaunch') ? securityProfile : null)
+    securityProfile: null
     storageProfile: {
       osDisk: {
         createOption: 'FromImage'
@@ -687,7 +535,7 @@ resource vmManager 'Microsoft.Compute/virtualMachines@2021-11-01' = [for i in ra
       adminPassword: adminPasswordOrKey
       linuxConfiguration: ((authenticationType == 'password') ? null : linuxConfiguration)
     }
-    securityProfile: ((securityType == 'TrustedLaunch') ? securityProfile : null)
+    securityProfile: null
     storageProfile: {
       osDisk: {
         createOption: 'FromImage'
@@ -711,26 +559,4 @@ resource vmManager 'Microsoft.Compute/virtualMachines@2021-11-01' = [for i in ra
       }
     }
   }
-}]
-
-output adminUsername string = adminUsername
-
-output emulatorHostInfo array = [for i in range(0, numberOfEmulatorInstances): {
-  fqdn: publicIPAddressHost[i].properties.dnsSettings.fqdn
-  ssh: 'ssh ${adminUsername}@${publicIPAddressHost[i].properties.dnsSettings.fqdn}'
-}]
-
-output emulatorGuestInfo array = [for i in range(0, numberOfEmulatorInstances): {
-  fqdn: publicIPAddressGuest[i].properties.dnsSettings.fqdn
-  ssh: 'ssh ${adminUsername}@${publicIPAddressGuest[i].properties.dnsSettings.fqdn}'
-}]
-
-output licenseServerInfo array = [for i in range(0, numberOfEmulatorInstances): {
-  fqdn: publicIPAddressLicenseServer[i].properties.dnsSettings.fqdn
-  ssh: 'ssh ${adminUsername}@${publicIPAddressLicenseServer[i].properties.dnsSettings.fqdn}'
-}]
-
-output managerInfo array = [for i in range(0, numberOfEmulatorInstances): {
-  fqdn: publicIPAddressManager[i].properties.dnsSettings.fqdn
-  ssh: 'ssh ${adminUsername}@${publicIPAddressManager[i].properties.dnsSettings.fqdn}'
 }]
