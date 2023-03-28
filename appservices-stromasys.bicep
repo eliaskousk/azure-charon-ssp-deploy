@@ -49,6 +49,9 @@ param authenticationType string = 'password'
 @secure()
 param adminPasswordOrKey string
 
+@description('Application port on the emulator guest to expose on the internal network')
+param emulatorGuestAppPort int = 80
+
 //
 // ========================================================
 //
@@ -197,8 +200,8 @@ resource loadBalancerEmulatorHostAndGuest 'Microsoft.Network/loadBalancers@2021-
             id: resourceId('Microsoft.Network/loadBalancers/probes', '${loadBalancerName}-emulator-host-and-guest', 'LBProbeGuestApp')
           }
           protocol: 'Tcp'
-          frontendPort: 80
-          backendPort: 80
+          frontendPort: emulatorGuestAppPort
+          backendPort: emulatorGuestAppPort
           idleTimeoutInMinutes: 15
         }
         name: 'LBRuleGuestApp'
@@ -217,7 +220,7 @@ resource loadBalancerEmulatorHostAndGuest 'Microsoft.Network/loadBalancers@2021-
       {
         properties: {
           protocol: 'Tcp'
-          port: 80
+          port: emulatorGuestAppPort
           intervalInSeconds: 15
           numberOfProbes: 2
         }
@@ -289,8 +292,8 @@ resource loadBalancerLicenseServer 'Microsoft.Network/loadBalancers@2021-05-01' 
             id: resourceId('Microsoft.Network/loadBalancers/probes', '${loadBalancerName}-license-server', 'LBProbeLicense')
           }
           protocol: 'Tcp'
-          frontendPort: 80
-          backendPort: 80
+          frontendPort: 8083
+          backendPort: 8083
           idleTimeoutInMinutes: 15
         }
         name: 'LBRuleLicense'
@@ -309,7 +312,7 @@ resource loadBalancerLicenseServer 'Microsoft.Network/loadBalancers@2021-05-01' 
       {
         properties: {
           protocol: 'Tcp'
-          port: 80
+          port: 8083
           intervalInSeconds: 15
           numberOfProbes: 2
         }
@@ -426,7 +429,7 @@ resource networkSecurityGroupGuest 'Microsoft.Network/networkSecurityGroups@2021
           sourceAddressPrefix: '*'
           sourcePortRange: '*'
           destinationAddressPrefix: '*'
-          destinationPortRange: '80'
+          destinationPortRange: '${emulatorGuestAppPort}'
         }
       }
     ]
