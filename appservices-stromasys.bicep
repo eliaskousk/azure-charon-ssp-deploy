@@ -10,30 +10,15 @@ targetScope = 'resourceGroup'
 //
 
 @description('Location of all resources')
-param location string
+param location string = resourceGroup().location
 
 @description('Prefix for all names')
-param prefix string
+param prefix string = 'test'
 
 @description('Tags for all resources')
-param tags object
-
-@description('Admin Username for VMs')
-param adminUsername string 
-
-@description('Type of authentication to use on the Virtual Machine. SSH key is recommended')
-@allowed([
-  'sshPublicKey'
-  'password'
-])
-param authenticationType string = 'password'
-
-@description('SSH key or password for the VMs. SSH key is recommended')
-@secure()
-param adminPasswordOrKey string
-
-@description('Number of Emulator Instances')
-param numberOfEmulatorInstances int = 2
+param tags object = {
+  tag1: 'tag-value-1'
+}
 
 @description('Size of the Emulator Host VMs')
 param vmSizeEmulatorHost string = 'Standard_F8s_v2'
@@ -49,6 +34,24 @@ param storageAccountType string = 'Standard_LRS'
 
 @description('Id of the subnet')
 param subnetId string = ''
+
+@description('Admin Username for VMs')
+param adminUsername string = 'sshuser'
+
+@description('Type of authentication to use on the Virtual Machine. SSH key is recommended')
+@allowed([
+  'sshPublicKey'
+  'password'
+])
+param authenticationType string = 'password'
+
+@description('SSH key or password for the VMs. SSH key is recommended')
+@secure()
+param adminPasswordOrKey string
+
+//
+// ========================================================
+//
 
 //
 // Variables
@@ -66,6 +69,9 @@ var charonPlan = {
   publisher: 'stromasys'
   product: 'charon-ssp-ve'
 }
+
+@description('Number of redundant resources for HA')
+var numberOfResourcesHA = 2
 
 @description('Availability Set name')
 var availabilitySetName = '${prefix}-availability-set'
@@ -124,17 +130,109 @@ resource availabilitySet 'Microsoft.Compute/availabilitySets@2021-11-01' = [for 
     name: 'Aligned'
   }
   properties: {
-    platformUpdateDomainCount: 2
-    platformFaultDomainCount: 2
+    platformUpdateDomainCount: numberOfResourcesHA
+    platformFaultDomainCount: numberOfResourcesHA
   }
 }]
 
 //
-// Load Balancers for all VMs (Emulator Hosts, Virtual Server and Manager)
+// Load Balancer for Emulator Host VMs
 //
 
-resource loadBalancer 'Microsoft.Network/loadBalancers@2021-05-01' = [for i in range(0, 3): {
-  name: '${loadBalancerName}-${i}'
+resource loadBalancerEmulatorHostAndGuest 'Microsoft.Network/loadBalancers@2021-05-01' = {
+  name: '${loadBalancerName}-emulator-host-and-guest'
+  location: location
+  tags: tags
+  sku: {
+    name: 'Standard'
+  }
+  properties: {
+    frontendIPConfigurations: [
+      {
+        properties: {
+          subnet: {
+            id: subnetId
+          }
+          privateIPAllocationMethod: 'Dynamic'
+        }
+        name: 'LoadBalancerFrontend'
+      }
+    ]
+    backendAddressPools: [
+      {
+        name: 'BackendPoolHostSSH'
+      }
+      {
+        name: 'BackendPoolGuestApp'
+      }
+    ]
+    loadBalancingRules: [
+      {
+        properties: {
+          frontendIPConfiguration: {
+            id: resourceId('Microsoft.Network/loadBalancers/frontendIpConfigurations', '${loadBalancerName}-emulator-host-and-guest', 'LoadBalancerFrontend')
+          }
+          backendAddressPool: {
+            id: resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '${loadBalancerName}-emulator-host-and-guest', 'BackendPoolHostSSH')
+          }
+          probe: {
+            id: resourceId('Microsoft.Network/loadBalancers/probes', '${loadBalancerName}-emulator-host-and-guest', 'LBProbeHostSSH')
+          }
+          protocol: 'Tcp'
+          frontendPort: 22
+          backendPort: 22
+          idleTimeoutInMinutes: 15
+        }
+        name: 'LBRuleHostSSH'
+      }
+      {
+        properties: {
+          frontendIPConfiguration: {
+            id: resourceId('Microsoft.Network/loadBalancers/frontendIpConfigurations', '${loadBalancerName}-emulator-host-and-guest', 'LoadBalancerFrontend')
+          }
+          backendAddressPool: {
+            id: resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '${loadBalancerName}-emulator-host-and-guest', 'BackendPoolGuestApp')
+          }
+          probe: {
+            id: resourceId('Microsoft.Network/loadBalancers/probes', '${loadBalancerName}-emulator-host-and-guest', 'LBProbeGuestApp')
+          }
+          protocol: 'Tcp'
+          frontendPort: 80
+          backendPort: 80
+          idleTimeoutInMinutes: 15
+        }
+        name: 'LBRuleGuestApp'
+      }
+    ]
+    probes: [
+      {
+        properties: {
+          protocol: 'Tcp'
+          port: 22
+          intervalInSeconds: 15
+          numberOfProbes: 2
+        }
+        name: 'LBProbeHostSSH'
+      }
+      {
+        properties: {
+          protocol: 'Tcp'
+          port: 80
+          intervalInSeconds: 15
+          numberOfProbes: 2
+        }
+        name: 'LBProbeGuestApp'
+      }
+    ]
+  }
+}
+
+//
+// Load Balancer for VE License Server VMs
+//
+
+resource loadBalancerLicenseServer 'Microsoft.Network/loadBalancers@2021-05-01' = {
+  name: '${loadBalancerName}-license-server'
   location: location
   tags: tags
   sku: {
@@ -157,20 +255,20 @@ resource loadBalancer 'Microsoft.Network/loadBalancers@2021-05-01' = [for i in r
         name: 'BackendPoolSSH'
       }
       {
-        name: 'BackendPoolApp'
+        name: 'BackendPoolLicense'
       }
     ]
     loadBalancingRules: [
       {
         properties: {
           frontendIPConfiguration: {
-            id: resourceId('Microsoft.Network/loadBalancers/frontendIpConfigurations', '${loadBalancerName}-${i}', 'LoadBalancerFrontend')
+            id: resourceId('Microsoft.Network/loadBalancers/frontendIpConfigurations', '${loadBalancerName}-license-server', 'LoadBalancerFrontend')
           }
           backendAddressPool: {
-            id: resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '${loadBalancerName}-${i}', 'BackendPoolSSH')
+            id: resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '${loadBalancerName}-license-server', 'BackendPoolSSH')
           }
           probe: {
-            id: resourceId('Microsoft.Network/loadBalancers/probes', '${loadBalancerName}-${i}', 'LBProbeSSH')
+            id: resourceId('Microsoft.Network/loadBalancers/probes', '${loadBalancerName}-license-server', 'LBProbeSSH')
           }
           protocol: 'Tcp'
           frontendPort: 22
@@ -182,20 +280,20 @@ resource loadBalancer 'Microsoft.Network/loadBalancers@2021-05-01' = [for i in r
       {
         properties: {
           frontendIPConfiguration: {
-            id: resourceId('Microsoft.Network/loadBalancers/frontendIpConfigurations', '${loadBalancerName}-${i}', 'LoadBalancerFrontend')
+            id: resourceId('Microsoft.Network/loadBalancers/frontendIpConfigurations', '${loadBalancerName}-license-server', 'LoadBalancerFrontend')
           }
           backendAddressPool: {
-            id: resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '${loadBalancerName}-${i}', 'BackendPoolApp')
+            id: resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '${loadBalancerName}-license-server', 'BackendPoolLicense')
           }
           probe: {
-            id: resourceId('Microsoft.Network/loadBalancers/probes', '${loadBalancerName}-${i}', 'LBProbeApp')
+            id: resourceId('Microsoft.Network/loadBalancers/probes', '${loadBalancerName}-license-server', 'LBProbeLicense')
           }
           protocol: 'Tcp'
           frontendPort: 80
           backendPort: 80
           idleTimeoutInMinutes: 15
         }
-        name: 'LBRuleApp'
+        name: 'LBRuleLicense'
       }
     ]
     probes: [
@@ -215,18 +313,80 @@ resource loadBalancer 'Microsoft.Network/loadBalancers@2021-05-01' = [for i in r
           intervalInSeconds: 15
           numberOfProbes: 2
         }
-        name: 'LBProbeApp'
+        name: 'LBProbeLicense'
       }
     ]
   }
-}]
+}
 
 //
-// Network Security Group for all VMs (Emulator Hosts, Virtual Server and Manager)
+// Load Balancer for Manager VMs
 //
 
-resource networkSecurityGroupMain 'Microsoft.Network/networkSecurityGroups@2021-05-01' = {
-  name: '${networkSecurityGroupName}-main'
+resource loadBalancerManager 'Microsoft.Network/loadBalancers@2021-05-01' = {
+  name: '${loadBalancerName}-manager'
+  location: location
+  tags: tags
+  sku: {
+    name: 'Standard'
+  }
+  properties: {
+    frontendIPConfigurations: [
+      {
+        properties: {
+          subnet: {
+            id: subnetId
+          }
+          privateIPAllocationMethod: 'Dynamic'
+        }
+        name: 'LoadBalancerFrontend'
+      }
+    ]
+    backendAddressPools: [
+      {
+        name: 'BackendPoolSSH'
+      }
+    ]
+    loadBalancingRules: [
+      {
+        properties: {
+          frontendIPConfiguration: {
+            id: resourceId('Microsoft.Network/loadBalancers/frontendIpConfigurations', '${loadBalancerName}-manager', 'LoadBalancerFrontend')
+          }
+          backendAddressPool: {
+            id: resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '${loadBalancerName}-manager', 'BackendPoolSSH')
+          }
+          probe: {
+            id: resourceId('Microsoft.Network/loadBalancers/probes', '${loadBalancerName}-manager', 'LBProbeSSH')
+          }
+          protocol: 'Tcp'
+          frontendPort: 22
+          backendPort: 22
+          idleTimeoutInMinutes: 15
+        }
+        name: 'LBRuleSSH'
+      }
+    ]
+    probes: [
+      {
+        properties: {
+          protocol: 'Tcp'
+          port: 22
+          intervalInSeconds: 15
+          numberOfProbes: 2
+        }
+        name: 'LBProbeSSH'
+      }
+    ]
+  }
+}
+
+//
+// Network Security Group for all VMs (Emulator Hosts, License Server and Manager)
+//
+
+resource networkSecurityGroupSSH 'Microsoft.Network/networkSecurityGroups@2021-05-01' = {
+  name: '${networkSecurityGroupName}-ssh'
   location: location
   properties: {
     securityRules: [
@@ -248,11 +408,11 @@ resource networkSecurityGroupMain 'Microsoft.Network/networkSecurityGroups@2021-
 }
 
 //
-// Network Security Group for Emulator Guests
+// Network Security Group for Emulator Guest App
 //
 
 resource networkSecurityGroupGuest 'Microsoft.Network/networkSecurityGroups@2021-05-01' = {
-  name: '${networkSecurityGroupName}-guest'
+  name: '${networkSecurityGroupName}-emulator-guest'
   location: location
   properties: {
     securityRules: [
@@ -277,8 +437,8 @@ resource networkSecurityGroupGuest 'Microsoft.Network/networkSecurityGroups@2021
 // Network Interfaces for Emulator Host (Linux)
 //
 
-resource networkInterfaceEmulatorHost 'Microsoft.Network/networkInterfaces@2021-05-01' = [for i in range(0, numberOfEmulatorInstances): {
-  name: '${networkInterfaceNamePrefix}-host-${i}'
+resource networkInterfaceEmulatorHost 'Microsoft.Network/networkInterfaces@2021-05-01' = [for i in range(0, numberOfResourcesHA): {
+  name: '${networkInterfaceNamePrefix}-emulator-host-${i}'
   location: location
   tags: tags
   properties: {
@@ -292,18 +452,18 @@ resource networkInterfaceEmulatorHost 'Microsoft.Network/networkInterfaces@2021-
           privateIPAllocationMethod: 'Dynamic'
           loadBalancerBackendAddressPools: [
             {
-              id: resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '${loadBalancerName}-0', 'BackendPoolSSH')
+              id: resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '${loadBalancerName}-emulator-host-and-guest', 'BackendPoolHostSSH')
             }
           ]
         }
       }
     ]
     networkSecurityGroup: {
-      id: networkSecurityGroupMain.id
+      id: networkSecurityGroupSSH.id
     }
   }
   dependsOn: [
-    loadBalancer[0]
+    loadBalancerEmulatorHostAndGuest
   ]
 }]
 
@@ -311,8 +471,8 @@ resource networkInterfaceEmulatorHost 'Microsoft.Network/networkInterfaces@2021-
 // Network Interfaces for Emulator Guest (Solaris)
 //
 
-resource networkInterfaceEmulatorGuest 'Microsoft.Network/networkInterfaces@2021-05-01' = [for i in range(0, numberOfEmulatorInstances): {
-  name: '${networkInterfaceNamePrefix}-guest-${i}'
+resource networkInterfaceEmulatorGuest 'Microsoft.Network/networkInterfaces@2021-05-01' = [for i in range(0, numberOfResourcesHA): {
+  name: '${networkInterfaceNamePrefix}-emulator-guest-${i}'
   location: location
   tags: tags
   properties: {
@@ -326,7 +486,7 @@ resource networkInterfaceEmulatorGuest 'Microsoft.Network/networkInterfaces@2021
           privateIPAllocationMethod: 'Dynamic'
           loadBalancerBackendAddressPools: [
             {
-              id: resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '${loadBalancerName}-0', 'BackendPoolApp')
+              id: resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '${loadBalancerName}-emulator-host-and-guest', 'BackendPoolGuestApp')
             }
           ]
         }
@@ -337,7 +497,7 @@ resource networkInterfaceEmulatorGuest 'Microsoft.Network/networkInterfaces@2021
     }
   }
   dependsOn: [
-    loadBalancer[0]
+    loadBalancerEmulatorHostAndGuest
   ]
 }]
 
@@ -345,7 +505,7 @@ resource networkInterfaceEmulatorGuest 'Microsoft.Network/networkInterfaces@2021
 // Network Interfaces for VE License Server
 //
 
-resource networkInterfaceLicenseServer 'Microsoft.Network/networkInterfaces@2021-05-01' = [for i in range(0, numberOfEmulatorInstances): {
+resource networkInterfaceLicenseServer 'Microsoft.Network/networkInterfaces@2021-05-01' = [for i in range(0, numberOfResourcesHA): {
   name: '${networkInterfaceNamePrefix}-license-server-${i}'
   location: location
   tags: tags
@@ -360,18 +520,21 @@ resource networkInterfaceLicenseServer 'Microsoft.Network/networkInterfaces@2021
           privateIPAllocationMethod: 'Dynamic'
           loadBalancerBackendAddressPools: [
             {
-              id: resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '${loadBalancerName}-1', 'BackendPoolSSH')
+              id: resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '${loadBalancerName}-license-server', 'BackendPoolSSH')
+            }
+            {
+              id: resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '${loadBalancerName}-license-server', 'BackendPoolLicense')
             }
           ]
         }
       }
     ]
     networkSecurityGroup: {
-      id: networkSecurityGroupMain.id
+      id: networkSecurityGroupSSH.id
     }
   }
   dependsOn: [
-    loadBalancer[1]
+    loadBalancerLicenseServer
   ]
 }]
 
@@ -379,7 +542,7 @@ resource networkInterfaceLicenseServer 'Microsoft.Network/networkInterfaces@2021
 // Network Interfaces for Manager
 //
 
-resource networkInterfaceManager 'Microsoft.Network/networkInterfaces@2021-05-01' = [for i in range(0, numberOfEmulatorInstances): {
+resource networkInterfaceManager 'Microsoft.Network/networkInterfaces@2021-05-01' = [for i in range(0, numberOfResourcesHA): {
   name: '${networkInterfaceNamePrefix}-manager-${i}'
   location: location
   tags: tags
@@ -394,18 +557,18 @@ resource networkInterfaceManager 'Microsoft.Network/networkInterfaces@2021-05-01
           privateIPAllocationMethod: 'Dynamic'
           loadBalancerBackendAddressPools: [
             {
-              id: resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '${loadBalancerName}-2', 'BackendPoolSSH')
+              id: resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '${loadBalancerName}-manager', 'BackendPoolSSH')
             }
           ]
         }
       }
     ]
     networkSecurityGroup: {
-      id: networkSecurityGroupMain.id
+      id: networkSecurityGroupSSH.id
     }
   }
   dependsOn: [
-    loadBalancer[2]
+    loadBalancerManager
   ]
 }]
 
@@ -413,7 +576,7 @@ resource networkInterfaceManager 'Microsoft.Network/networkInterfaces@2021-05-01
 // Charon SSP Emulator Host VMs
 //
 
-resource vmEmulator 'Microsoft.Compute/virtualMachines@2021-11-01' = [for i in range(0, numberOfEmulatorInstances): {
+resource vmEmulator 'Microsoft.Compute/virtualMachines@2021-11-01' = [for i in range(0, numberOfResourcesHA): {
   name: '${vmNamePrefix}-host-${i}'
   location: location
   tags: tags
@@ -469,7 +632,7 @@ resource vmEmulator 'Microsoft.Compute/virtualMachines@2021-11-01' = [for i in r
 // Charon VE License Server VMs
 //
 
-resource vmLicenseServer 'Microsoft.Compute/virtualMachines@2021-11-01' = [for i in range(0, numberOfEmulatorInstances): {
+resource vmLicenseServer 'Microsoft.Compute/virtualMachines@2021-11-01' = [for i in range(0, numberOfResourcesHA): {
   name: '${vmNamePrefix}-license-server-${i}'
   location: location
   tags: tags
@@ -517,7 +680,7 @@ resource vmLicenseServer 'Microsoft.Compute/virtualMachines@2021-11-01' = [for i
 // Charon Manager VMs
 //
 
-resource vmManager 'Microsoft.Compute/virtualMachines@2021-11-01' = [for i in range(0, numberOfEmulatorInstances): {
+resource vmManager 'Microsoft.Compute/virtualMachines@2021-11-01' = [for i in range(0, numberOfResourcesHA): {
   name: '${vmNamePrefix}-manager-${i}'
   location: location
   tags: tags

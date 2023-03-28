@@ -5,14 +5,8 @@
     "authenticationType": {
       "value": "password"
     },
-    "virtualNetworkAddressRange": {
-      "value": "10.0.0.0/16"
-    },
-    "subnetAddressRange": {
-      "value": "10.0.0.0/24"
-    },
-    "securityType": {
-      "value": "Standard"
+    "subnetId": {
+      "value": "/subscriptions/6029a1db-d186-4572-9394-308e67af413c/resourceGroups/bicep-test-1/providers/Microsoft.Network/virtualNetworks/test-virtual-network/subnets/test-subnet"
     },
     "prefix": {
       "value": "test"
@@ -22,9 +16,6 @@
     },
     "adminPasswordOrKey": {
         "value": "Ra42$@!sjf@Vf90"
-    },
-    "numberOfEmulatorInstances": {
-      "value": 2
     },
     "vmSizeEmulatorHost": {
       "value": "Standard_F8s_v2"
