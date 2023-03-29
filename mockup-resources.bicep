@@ -30,20 +30,20 @@ param adminUsername string = 'sshuser'
 // Variables
 //
 
-@description('Number of redundant resources for HA')
-var numberOfResourcesHA = 2
-
 @description('Name of the Virtual Network')
 var virtualNetworkName = '${prefix}-virtual-network'
 
 @description('Name of the Subnet')
 var subnetName = '${prefix}-subnet'
 
-@description('Prefix to use for Public IP names')
-var publicIPAddressNamePrefix = '${prefix}-public-ip'
+// @description('Number of redundant resources for HA')
+// var numberOfResourcesHA = 2
 
-@description('Unique DNS Name for the Public IP used to access the VMs')
-var dnsLabelPrefix = toLower('${prefix}-vm-${uniqueString(resourceGroup().id)}')
+// @description('Prefix to use for Public IP names')
+// var publicIPAddressNamePrefix = '${prefix}-public-ip'
+
+// @description('Unique DNS Name for the Public IP used to access the VMs')
+// var dnsLabelPrefix = toLower('${prefix}-vm-${uniqueString(resourceGroup().id)}')
 
 // @description('Security Profile')
 // var securityProfile = {
@@ -84,102 +84,102 @@ resource subnet 'Microsoft.Network/virtualNetworks/subnets@2021-05-01' = {
 // Public IPs for Emulator Hosts
 //
 
-resource publicIPAddressHost 'Microsoft.Network/publicIPAddresses@2021-05-01' = [for i in range(0, numberOfResourcesHA): {
-  name: '${publicIPAddressNamePrefix}-host-${i}'
-  location: location
-  sku: {
-    name: 'Standard'
-  }
-  properties: {
-    publicIPAllocationMethod: 'Static'
-    publicIPAddressVersion: 'IPv4'
-    dnsSettings: {
-      domainNameLabel: 'host-${i}-${dnsLabelPrefix}'
-    }
-    idleTimeoutInMinutes: 4
-  }
-}]
+// resource publicIPAddressHost 'Microsoft.Network/publicIPAddresses@2021-05-01' = [for i in range(0, numberOfResourcesHA): {
+//   name: '${publicIPAddressNamePrefix}-host-${i}'
+//   location: location
+//   sku: {
+//     name: 'Standard'
+//   }
+//   properties: {
+//     publicIPAllocationMethod: 'Static'
+//     publicIPAddressVersion: 'IPv4'
+//     dnsSettings: {
+//       domainNameLabel: 'host-${i}-${dnsLabelPrefix}'
+//     }
+//     idleTimeoutInMinutes: 4
+//   }
+// }]
 
 //
 // Public IPs for Emulator Guests
 //
 
-resource publicIPAddressGuest 'Microsoft.Network/publicIPAddresses@2021-05-01' = [for i in range(0, numberOfResourcesHA): {
-  name: '${publicIPAddressNamePrefix}-guest-${i}'
-  location: location
-  sku: {
-    name: 'Standard'
-  }
-  properties: {
-    publicIPAllocationMethod: 'Static'
-    publicIPAddressVersion: 'IPv4'
-    dnsSettings: {
-      domainNameLabel: 'guest-${i}-${dnsLabelPrefix}'
-    }
-    idleTimeoutInMinutes: 4
-  }
-}]
+// resource publicIPAddressGuest 'Microsoft.Network/publicIPAddresses@2021-05-01' = [for i in range(0, numberOfResourcesHA): {
+//   name: '${publicIPAddressNamePrefix}-guest-${i}'
+//   location: location
+//   sku: {
+//     name: 'Standard'
+//   }
+//   properties: {
+//     publicIPAllocationMethod: 'Static'
+//     publicIPAddressVersion: 'IPv4'
+//     dnsSettings: {
+//       domainNameLabel: 'guest-${i}-${dnsLabelPrefix}'
+//     }
+//     idleTimeoutInMinutes: 4
+//   }
+// }]
 
 //
 // Public IPs for License Server
 //
 
-resource publicIPAddressLicenseServer 'Microsoft.Network/publicIPAddresses@2021-05-01' = [for i in range(0, numberOfResourcesHA): {
-  name: '${publicIPAddressNamePrefix}-license-server-${i}'
-  location: location
-  sku: {
-    name: 'Standard'
-  }
-  properties: {
-    publicIPAllocationMethod: 'Static'
-    publicIPAddressVersion: 'IPv4'
-    dnsSettings: {
-      domainNameLabel: 'license-server-${i}-${dnsLabelPrefix}'
-    }
-    idleTimeoutInMinutes: 4
-  }
-}]
+// resource publicIPAddressLicenseServer 'Microsoft.Network/publicIPAddresses@2021-05-01' = [for i in range(0, numberOfResourcesHA): {
+//   name: '${publicIPAddressNamePrefix}-license-server-${i}'
+//   location: location
+//   sku: {
+//     name: 'Standard'
+//   }
+//   properties: {
+//     publicIPAllocationMethod: 'Static'
+//     publicIPAddressVersion: 'IPv4'
+//     dnsSettings: {
+//       domainNameLabel: 'license-server-${i}-${dnsLabelPrefix}'
+//     }
+//     idleTimeoutInMinutes: 4
+//   }
+// }]
 
 //
 // Public IPs for Manager
 //
 
-resource publicIPAddressManager 'Microsoft.Network/publicIPAddresses@2021-05-01' = [for i in range(0, numberOfResourcesHA): {
-  name: '${publicIPAddressNamePrefix}-manager-${i}'
-  location: location
-  sku: {
-    name: 'Standard'
-  }
-  properties: {
-    publicIPAllocationMethod: 'Static'
-    publicIPAddressVersion: 'IPv4'
-    dnsSettings: {
-      domainNameLabel: 'manager-${i}-${dnsLabelPrefix}'
-    }
-    idleTimeoutInMinutes: 4
-  }
-}]
+// resource publicIPAddressManager 'Microsoft.Network/publicIPAddresses@2021-05-01' = [for i in range(0, numberOfResourcesHA): {
+//   name: '${publicIPAddressNamePrefix}-manager-${i}'
+//   location: location
+//   sku: {
+//     name: 'Standard'
+//   }
+//   properties: {
+//     publicIPAllocationMethod: 'Static'
+//     publicIPAddressVersion: 'IPv4'
+//     dnsSettings: {
+//       domainNameLabel: 'manager-${i}-${dnsLabelPrefix}'
+//     }
+//     idleTimeoutInMinutes: 4
+//   }
+// }]
 
 output adminUsername string = adminUsername
 
 output subnetId string = subnet.id
 
-output emulatorHostInfo array = [for i in range(0, numberOfResourcesHA): {
-  fqdn: publicIPAddressHost[i].properties.dnsSettings.fqdn
-  ssh: 'ssh ${adminUsername}@${publicIPAddressHost[i].properties.dnsSettings.fqdn}'
-}]
+// output emulatorHostInfo array = [for i in range(0, numberOfResourcesHA): {
+//   fqdn: publicIPAddressHost[i].properties.dnsSettings.fqdn
+//   ssh: 'ssh ${adminUsername}@${publicIPAddressHost[i].properties.dnsSettings.fqdn}'
+// }]
 
-output emulatorGuestInfo array = [for i in range(0, numberOfResourcesHA): {
-  fqdn: publicIPAddressGuest[i].properties.dnsSettings.fqdn
-  ssh: 'ssh ${adminUsername}@${publicIPAddressGuest[i].properties.dnsSettings.fqdn}'
-}]
+// output emulatorGuestInfo array = [for i in range(0, numberOfResourcesHA): {
+//   fqdn: publicIPAddressGuest[i].properties.dnsSettings.fqdn
+//   ssh: 'ssh ${adminUsername}@${publicIPAddressGuest[i].properties.dnsSettings.fqdn}'
+// }]
 
-output licenseServerInfo array = [for i in range(0, numberOfResourcesHA): {
-  fqdn: publicIPAddressLicenseServer[i].properties.dnsSettings.fqdn
-  ssh: 'ssh ${adminUsername}@${publicIPAddressLicenseServer[i].properties.dnsSettings.fqdn}'
-}]
+// output licenseServerInfo array = [for i in range(0, numberOfResourcesHA): {
+//   fqdn: publicIPAddressLicenseServer[i].properties.dnsSettings.fqdn
+//   ssh: 'ssh ${adminUsername}@${publicIPAddressLicenseServer[i].properties.dnsSettings.fqdn}'
+// }]
 
-output managerInfo array = [for i in range(0, numberOfResourcesHA): {
-  fqdn: publicIPAddressManager[i].properties.dnsSettings.fqdn
-  ssh: 'ssh ${adminUsername}@${publicIPAddressManager[i].properties.dnsSettings.fqdn}'
-}]
+// output managerInfo array = [for i in range(0, numberOfResourcesHA): {
+//   fqdn: publicIPAddressManager[i].properties.dnsSettings.fqdn
+//   ssh: 'ssh ${adminUsername}@${publicIPAddressManager[i].properties.dnsSettings.fqdn}'
+// }]
