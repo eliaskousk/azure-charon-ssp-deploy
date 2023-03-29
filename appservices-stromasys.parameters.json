@@ -2,11 +2,14 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
+    "emulatorGuestAppPort": {
+      "value": 80
+    },
     "authenticationType": {
       "value": "password"
     },
     "subnetId": {
-      "value": "/subscriptions/6029a1db-d186-4572-9394-308e67af413c/resourceGroups/bicep-test-1/providers/Microsoft.Network/virtualNetworks/test-virtual-network/subnets/test-subnet"
+      "value": "/subscriptions/6029a1db-d186-4572-9394-308e67af413c/resourceGroups/bicep-ssp-test-1/providers/Microsoft.Network/virtualNetworks/test-virtual-network/subnets/test-subnet"
     },
     "prefix": {
       "value": "test"
