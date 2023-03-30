@@ -13,13 +13,15 @@ Some of the key benefits of migrating to a cloud infrastructure using Stromasys 
 * Lower Costs. Charon costs less than a full migration and often less than a single-year of classic hardware support.
 
 ## Architecture
-![image](/docs/images/malz.png)
+![image](images/azure-stromasys-charon-ssp.png)
 
 This architecture includes Azure VMs that will be deployed to run the following software applications:
 
-- **Charon SSP Emulator** - The emulation software for legacy hardware.
-- **Charon VE License Server** - Needed to provide an active license to the Charon SSP emulator.
-- **Charon Manager** - Remote management of the Charon SSP emulator using a graphical interface.
+**Charon SSP Emulator** - The emulation software for legacy hardware.
+
+**Charon VE License Server** - Needed to provide an active license to the Charon SSP emulator.
+
+**Charon Manager** - Remote management of the Charon SSP emulator using a graphical interface.
 
 1. This deployment will create two VMs for each of the above software applications in order to support redundancy / high availability (HA). Thus, the total deployed VMs will be 6 ( 2 x 3). Each pair of VMs will have an associated Azure Load Balancer and Azure Availability Set to provide support for both active-active or active-passive scenarios.
 
@@ -33,7 +35,7 @@ This architecture includes Azure VMs that will be deployed to run the following 
 
 1. Users can also connect via Secure Shell (SSH) directly to the Solaris VMs, if an SSH server is installed and configured on the Solaris guest OS. The Charon-SSP emulator has its own dedicated network interface card which allows the Solaris guest OS to acquire its own IP address. The only restriction is that you should use a non-standard SSH port (not 22) if you access the Solaris guest OS through the Azure Load Balancer. This is because the Azure Load Balancer uses that port for the Linux SSH servers that reside on the Azure VMs.
 
-1. After deployment completes we recommend to read the [Charon SSP for Azure](https://stromasys.atlassian.net/wiki/spaces/DocCHSSP5xAZRGSupd1/) documentation and the [Charon-SSP for Linux documentation](https://stromasys.atlassian.net/wiki/spaces/KBP/pages/39158047/CHARON-SSP+for+Linux).
+After deployment completes we recommend to read the [Charon SSP for Azure](https://stromasys.atlassian.net/wiki/spaces/DocCHSSP5xAZRGSupd1/) documentation and the [Charon-SSP for Linux documentation](https://stromasys.atlassian.net/wiki/spaces/KBP/pages/39158047/CHARON-SSP+for+Linux).
 
 ## Deploy this scenario
 Click on the button below to deploy this accelerator solution:
@@ -45,5 +47,3 @@ You will need to populate certain fields to enable the deployment. To ensure tha
 For the best performance, we recommend that the Azure VMs for Charon SSP are compute-optimized [Fsv2-series](https://learn.microsoft.com/en-us/azure/virtual-machines/fsv2-series) or [FX-series](https://learn.microsoft.com/en-us/azure/virtual-machines/fx-series) with 8 ore more virtual CPUs. The required minimum frequency is 3.0 GHz. (3.4 GHz or more is recommended.). The Charon VE License Server and Charon Manager VMs can use any Azure VM series/size.
 
 You can also select to expose a network port associated with an application running your workload on the Solaris guest OS. This can be for example an RDBMS system that serves your databases to clients on the network.
-
-![image](/docs/images/stromasys_guide.png)
