@@ -8,20 +8,21 @@ By using this configuration, you can run a Solaris workload or application uncha
 
 Some of the key benefits of migrating to a cloud infrastructure using Stromasys emulation products are the following:
 
-* Business Continuity. Minimal disruption, as all applications, middleware, and data remain as is, and migrate unchanged.
-* Reduced Risk. Charon solutions diminish your risk of unplanned downtime by removing the dependency upon classic hardware
-* Lower Costs. Charon costs less than a full migration and often less than a single-year of classic hardware support.
+* **Business Continuity** - Minimal disruption, as all applications, middleware, and data remain as is, and migrate unchanged.
+* **Reduced Risk** - Charon solutions diminish your risk of unplanned downtime by removing the dependency upon classic hardware
+* **Lower Costs** - Charon costs less than a full migration and often less than a single-year of classic hardware support.
 
 ## Architecture
 ![image](images/azure-stromasys-charon-ssp.png)
 
 This architecture includes Azure VMs that will be deployed to run the following software applications:
 
-**Charon SSP Emulator** - The emulation software for legacy hardware.
+- **Charon SSP Emulator** - The emulation software for legacy hardware.
 
-**Charon VE License Server** - Needed to provide an active license to the Charon SSP emulator.
+- **Charon VE License Server** - Needed to provide an active license to the Charon SSP emulator.
 
-**Charon Manager** - Remote management of the Charon SSP emulator using a graphical interface.
+- **Charon Manager** - Remote management of the Charon SSP emulator using a graphical interface.
+
 
 1. This deployment will create two VMs for each of the above software applications in order to support redundancy / high availability (HA). Thus, the total deployed VMs will be 6 ( 2 x 3). Each pair of VMs will have an associated Azure Load Balancer and Azure Availability Set to provide support for both active-active or active-passive scenarios.
 
